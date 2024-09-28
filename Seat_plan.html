@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seat Reservation System</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .row {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    button {
+      width: 50px;
+      height: 50px;
+      margin: 5px;
+      border: 1px solid black;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button.booked {
+      background-color: red;
+      color: white;
+      cursor: not-allowed;
+    }
+    button.newly-booked {
+      background-color: green;
+      color: white;
+    }
+    button.available {
+      background-color: blue;
+      color: white;
+    }
+    .booking-form {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body ng-app="seatReservationApp" ng-controller="SeatController">
+
+  <h1>{{ title }}</h1>
+
+  <!-- Seat layout display -->
+  <div ng-repeat="row in rows" class="row">
+    <button
+      ng-repeat="seat in row"
+      ng-class="{'booked': isSeatBooked(seat), 'newly-booked': isSeatNewlyBooked(seat), 'available': !isSeatBooked(seat) && !isSeatNewlyBooked(seat)}"
+      ng-disabled="isSeatBooked(seat)"
+    >
+      {{ seat }}
+    </button>
+  </div>
+
+  <!-- Seat booking form -->
+  <div class="booking-form">
+    <label for="seatCount">Number of seats:</label>
+    <input type="number" id="seatCount" ng-model="seatCount" min="1" max="7" />
+    <button ng-click="bookSeats(seatCount)">Book Seats</button>
+  </div>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+  <script>
+    var app = angular.module('seatReservationApp', []);
+
+    app.controller('SeatController', function ($scope) {
+      $scope.title = 'Seat Reservation System';
+
+      // Initialize seats and rows
+      $scope.totalSeats = 80;
+      $scope.seatsPerRow = 7;
+      $scope.rows = [];
+      $scope.seatMap = Array(80).fill(0); // 0 = available, 1 = booked
+      $scope.newlyBooked = [];
+
+      // Create seat layout
+      $scope.createSeatLayout = function () {
+        let seatNumber = 1;
+        for (let i = 0; i < 10; i++) {
+          let row = [];
+          for (let j = 0; j < $scope.seatsPerRow; j++) {
+            row.push(seatNumber++);
+          }
+          $scope.rows.push(row);
+        }
+        // Last row with 3 seats
+        $scope.rows.push([seatNumber++, seatNumber++, seatNumber++]);
+      };
+
+      // Check if a seat is booked
+      $scope.isSeatBooked = function (seat) {
+        return $scope.seatMap[seat - 1] === 1;
+      };
+
+      // Check if a seat is newly booked
+      $scope.isSeatNewlyBooked = function (seat) {
+        return $scope.newlyBooked.includes(seat);
+      };
+
+      // Book seats function
+      $scope.bookSeats = function (numSeats) {
+        if (numSeats < 1 || numSeats > 7) {
+          alert('Please book between 1 and 7 seats.');
+          return;
+        }
+
+        let bookedSeats = [];
+
+        // Try to book in the same row
+        for (let row of $scope.rows) {
+          let availableSeats = row.filter(seat => !$scope.isSeatBooked(seat));
+          if (availableSeats.length >= numSeats) {
+            // Book in the same row
+            for (let i = 0; i < numSeats; i++) {
+              $scope.seatMap[availableSeats[i] - 1] = 1;
+              bookedSeats.push(availableSeats[i]);
+              $scope.newlyBooked.push(availableSeats[i]);
+            }
+            $scope.updateSeatLayout();
+            return;
+          }
+        }
+
+        // If not enough seats in a row, book nearby seats
+        let availableSeats = [];
+        $scope.rows.forEach(row => availableSeats.push(...row.filter(seat => !$scope.isSeatBooked(seat))));
+
+        if (availableSeats.length >= numSeats) {
+          for (let i = 0; i < numSeats; i++) {
+            $scope.seatMap[availableSeats[i] - 1] = 1;
+            bookedSeats.push(availableSeats[i]);
+            $scope.newlyBooked.push(availableSeats[i]);
+          }
+          $scope.updateSeatLayout();
+        } else {
+          alert('Not enough seats available.');
+        }
+      };
+
+      // Update seat layout after booking
+      $scope.updateSeatLayout = function () {
+        setTimeout(() => {
+          $scope.newlyBooked = []; // Reset newly booked after displaying
+          $scope.$apply(); // Refresh view
+        }, 1000); // Keep newly booked seats highlighted for 1 second
+      };
+
+      // Initialize seat layout
+      $scope.createSeatLayout();
+    });
+  </script>
+</body>
+</html>
